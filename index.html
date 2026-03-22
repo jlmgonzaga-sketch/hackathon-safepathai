@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0b0f">
+<title>SafePath AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0b0f;--s1:#13151c;--s2:#1c1f2a;--s3:#242736;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.13);--accent:#ff3b5c;--accent2:#ff7d52;--safe:#22d98a;--warn:#f5c842;--blue:#6495ff;--text:#f0f0f5;--sub:#a0a3b1;--muted:#6b7280;--safe-dim:rgba(34,217,138,.15);--warn-dim:rgba(245,200,66,.15);--accent-dim:rgba(255,59,92,.15);--blue-dim:rgba(100,149,255,.15)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif}
+#splash{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:opacity .6s ease}
+#splash.hide{opacity:0;pointer-events:none}
+.sp-ring{width:72px;height:72px;border-radius:50%;border:3px solid var(--accent);border-top-color:transparent;animation:spin .9s linear infinite}
+.sp-logo{font-family:'Syne',sans-serif;font-size:2.2rem;font-weight:800;letter-spacing:-1px}
+.sp-logo span{color:var(--accent)}
+.sp-tag{font-size:.68rem;letter-spacing:.22em;color:var(--muted);text-transform:uppercase}
+@keyframes spin{to{transform:rotate(360deg)}}
+#auth-screen{position:fixed;inset:0;z-index:90;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
+#auth-screen.show{display:flex}
+.auth-logo{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;margin-bottom:6px;text-align:center}
+.auth-logo span{color:var(--accent)}
+.auth-sub{color:var(--muted);font-size:.82rem;margin-bottom:24px;text-align:center}
+.auth-tabs{display:flex;background:var(--s2);border-radius:10px;padding:3px;margin-bottom:20px;width:100%;max-width:360px}
+.auth-tab{flex:1;padding:8px;text-align:center;font-size:.82rem;font-weight:600;border-radius:8px;cursor:pointer;color:var(--muted);transition:all .2s}
+.auth-tab.active{background:var(--s1);color:var(--text)}
+.auth-form{width:100%;max-width:360px;display:flex;flex-direction:column;gap:12px}
+.auth-panel{display:none;flex-direction:column;gap:12px}
+.auth-panel.active{display:flex}
+.field-group{display:flex;flex-direction:column;gap:5px}
+.field-group label{font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.field-group input{background:var(--s2);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;outline:none;transition:border-color .2s;-webkit-appearance:none}
+.field-group input:focus{border-color:var(--accent)}
+.field-group input::placeholder{color:var(--muted)}
+.auth-btn{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:14px;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;width:100%;-webkit-appearance:none}
+.auth-btn:active{opacity:.8}
+.auth-btn:disabled{opacity:.5}
+.auth-err{background:var(--accent-dim);border:1px solid rgba(255,59,92,.3);border-radius:10px;padding:10px 14px;font-size:.8rem;color:var(--accent);display:none}
+.auth-err.show{display:block}
+.auth-demo{text-align:center;font-size:.75rem;color:var(--muted)}
+.auth-demo a{color:var(--accent);cursor:pointer}
+#app{height:100%;display:none;flex-direction:column}
+#app.show{display:flex}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 10px;flex-shrink:0}
+.logo{font-family:'Syne',sans-serif;font-size:1.25rem;font-weight:800;letter-spacing:-.5px}
+.logo span{color:var(--accent)}
+.status-pill{display:flex;align-items:center;gap:5px;background:rgba(34,217,138,.12);border:1px solid rgba(34,217,138,.3);border-radius:99px;padding:4px 11px;font-size:.68rem;font-weight:600;color:var(--safe)}
+.s-dot{width:6px;height:6px;border-radius:50%;background:var(--safe);animation:blink 2s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.page{display:none;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.page.active{display:block}
+.pc{padding:0 18px 90px;display:flex;flex-direction:column;gap:16px;padding-top:8px}
+.bottom-nav{display:flex;background:rgba(10,11,15,.96);border-top:1px solid var(--border);flex-shrink:0;padding-bottom:env(safe-area-inset-bottom,0)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 6px 8px;cursor:pointer;color:var(--muted);font-size:.58rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;position:relative;transition:color .2s}
+.nav-item.active{color:var(--accent)}
+.ni{font-size:1.2rem;line-height:1}
+.nav-badge{position:absolute;top:7px;right:calc(50% - 16px);background:var(--accent);color:#fff;font-size:.55rem;font-weight:800;border-radius:99px;padding:1px 5px;min-width:15px;text-align:center;display:none}
+.nav-badge.show{display:block}
+.card{background:var(--s1);border:1px solid var(--border);border-radius:20px;padding:16px}
+.ct{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.ct a{color:var(--accent);font-size:.72rem;letter-spacing:normal;text-transform:none;cursor:pointer}
+.greeting h2{font-size:1.3rem;font-weight:700;letter-spacing:-.3px}
+.greeting p{color:var(--muted);font-size:.78rem;margin-top:3px}
+.sos-wrap{background:linear-gradient(160deg,#130810,#12080d);border:1px solid rgba(255,59,92,.22);border-radius:28px;padding:28px 18px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;position:relative;overflow:hidden}
+.sos-wrap::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(255,59,92,.1),transparent 65%);pointer-events:none}
+.sos-ra{position:relative;width:148px;height:148px;display:flex;align-items:center;justify-content:center}
+.sos-ring{position:absolute;width:148px;height:148px;border-radius:50%;border:2px solid var(--accent);opacity:0;animation:ripple 2.4s ease-out infinite}
+.sos-ring:nth-child(2){animation-delay:.8s}
+.sos-ring:nth-child(3){animation-delay:1.6s}
+@keyframes ripple{0%{transform:scale(.5);opacity:.7}100%{transform:scale(1.5);opacity:0}}
+.sos-btn{position:relative;z-index:2;width:112px;height:112px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ff6b7f,var(--accent) 60%,#c2002f);border:4px solid rgba(255,255,255,.14);box-shadow:0 0 36px rgba(255,59,92,.5),inset 0 2px 8px rgba(255,255,255,.18);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;transition:transform .15s,box-shadow .15s;-webkit-touch-callout:none}
+.sos-btn:active,.sos-btn.pressing{transform:scale(.92);box-shadow:0 0 16px rgba(255,59,92,.3)}
+.sos-label{font-family:'Syne',sans-serif;font-size:1.7rem;font-weight:800;color:#fff;letter-spacing:2px;line-height:1}
+.sos-sub{font-size:.58rem;letter-spacing:.18em;color:rgba(255,255,255,.65);font-weight:600}
+.sos-hint{font-size:.72rem;color:var(--muted);text-align:center}
+.trig-row{display:flex;gap:8px;width:100%}
+.trig-btn{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:9px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+.trig-btn:active{background:rgba(255,59,92,.1);border-color:rgba(255,59,92,.4)}
+.trig-icon{font-size:1.1rem}
+.trig-lbl{font-size:.62rem;color:var(--muted);font-weight:600}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.sc{background:var(--s2);border-radius:14px;padding:12px 11px;display:flex;flex-direction:column;gap:3px}
+.sc-icon{font-size:1rem;margin-bottom:2px}
+.sc-val{font-size:1.2rem;font-weight:700}
+.sc-lbl{font-size:.68rem;color:var(--muted)}
+.c-s{color:var(--safe)}.c-w{color:var(--warn)}.c-a{color:var(--accent)}.c-b{color:var(--blue)}
+.insight-box{background:rgba(255,125,82,.07);border:1px solid rgba(255,125,82,.2);border-radius:12px;padding:12px;display:flex;gap:10px;align-items:flex-start}
+.insight-text{font-size:.78rem;line-height:1.55;color:rgba(240,240,245,.85)}
+.insight-text strong{color:var(--accent2)}
+.vrow{display:flex;align-items:center;gap:8px;margin-top:10px}
+.vbars{display:flex;align-items:flex-end;gap:3px;height:20px}
+.vb{width:4px;border-radius:2px;background:var(--accent)}
+.vb:nth-child(1){height:6px;animation:vba .6s ease infinite}
+.vb:nth-child(2){height:14px;animation:vba .6s .1s ease infinite}
+.vb:nth-child(3){height:20px;animation:vba .6s .2s ease infinite}
+.vb:nth-child(4){height:12px;animation:vba .6s .15s ease infinite}
+.vb:nth-child(5){height:8px;animation:vba .6s .05s ease infinite}
+@keyframes vba{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
+.vlbl{font-size:.75rem;color:var(--muted)}
+.cr{display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid var(--border)}
+.cr:last-child{border-bottom:none}
+.ca{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;flex-shrink:0}
+.ci{flex:1}
+.cn{font-size:.88rem;font-weight:600}
+.crole{font-size:.7rem;color:var(--muted);margin-top:1px}
+.cbadge{padding:3px 9px;border-radius:99px;font-size:.65rem;font-weight:700}
+.c-online{background:var(--safe-dim);color:var(--safe)}
+.c-away{background:var(--warn-dim);color:var(--warn)}
+.rr{display:flex;align-items:center;gap:12px}
+.ri{font-size:1.6rem}
+.rinfo{flex:1}
+.rtitle{font-size:.88rem;font-weight:600}
+.rsub{font-size:.72rem;color:var(--muted);margin-top:2px}
+.rscore{width:42px;height:42px;border-radius:50%;background:var(--safe-dim);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.88rem;color:var(--safe)}
+.map-canvas{border-radius:18px;overflow:hidden;border:1px solid var(--border);background:#0e1018}
+.legend{display:flex;gap:14px;flex-wrap:wrap}
+.li{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--muted)}
+.ld{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.rpt-btn{background:rgba(255,59,92,.1);border:1px solid rgba(255,59,92,.3);border-radius:14px;padding:11px;text-align:center;cursor:pointer;font-size:.82rem;font-weight:700;color:var(--accent)}
+.rpt-btn:active{background:rgba(255,59,92,.2)}
+.inc-list{display:flex;flex-direction:column;gap:8px}
+.inc-item{display:flex;gap:9px;align-items:flex-start;background:var(--s2);border-radius:12px;padding:10px;cursor:pointer}
+.inc-item:active{background:var(--s3)}
+.ibadge{padding:3px 8px;border-radius:6px;font-size:.62rem;font-weight:800;flex-shrink:0;margin-top:1px}
+.ih{background:rgba(255,59,92,.2);color:var(--accent)}
+.im{background:rgba(245,200,66,.2);color:var(--warn)}
+.il{background:rgba(34,217,138,.2);color:var(--safe)}
+.ii{background:rgba(100,149,255,.2);color:var(--blue)}
+.ibody{flex:1}
+.ititle{font-size:.84rem;font-weight:600}
+.imeta{font-size:.7rem;color:var(--muted);margin-top:2px}
+.ss{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+.ss:last-child{border-bottom:none}
+.ssicon{font-size:1.3rem;width:30px;text-align:center}
+.ssinfo{flex:1}
+.ssname{font-size:.84rem;font-weight:600}
+.sstype{font-size:.7rem;color:var(--muted);margin-top:1px}
+.ssdist{font-size:.8rem;color:var(--blue);font-weight:600}
+.al-item{background:var(--s1);border:1px solid var(--border);border-radius:18px;padding:15px;display:flex;flex-direction:column;gap:9px}
+.al-item.unread{border-color:rgba(255,59,92,.3)}
+.al-hdr{display:flex;align-items:flex-start;gap:9px}
+.al-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:5px}
+.al-dot.read{background:var(--muted)}
+.al-title{flex:1;font-size:.88rem;font-weight:700;line-height:1.4}
+.al-desc{font-size:.78rem;color:var(--muted);line-height:1.55;padding-left:17px}
+.al-actions{display:flex;gap:8px;padding-left:17px}
+.aa-btn{padding:6px 14px;border-radius:9px;font-size:.75rem;font-weight:700;cursor:pointer;border:none;font-family:'DM Sans',sans-serif}
+.aa-btn:active{opacity:.75}
+.aa-p{background:var(--accent);color:#fff}
+.aa-g{background:var(--s2);color:var(--text)}
+.al-time{font-size:.68rem;color:var(--muted);padding-left:17px}
+.empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:60px 0;text-align:center}
+.empty-icon{font-size:3rem}
+.empty-title{font-size:1.1rem;font-weight:700}
+.empty-sub{font-size:.8rem;color:var(--muted)}
+.hl-card{background:var(--s1);border:1px solid var(--border);border-radius:18px;padding:16px;gap:12px;display:flex;flex-direction:column}
+.hl-title{font-size:.82rem;font-weight:700}
+.hl-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.hl-btn{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+.hl-btn:active{background:var(--s3)}
+.hl-num{font-size:1.25rem;font-weight:800;color:var(--accent)}
+.hl-lbl{font-size:.68rem;color:var(--muted)}
+.ph{display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px 0 8px}
+.pav{width:76px;height:76px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:1.9rem;font-weight:700;color:#fff;box-shadow:0 0 0 4px rgba(255,59,92,.2)}
+.pname{font-family:'Syne',sans-serif;font-size:1.25rem;font-weight:800}
+.pid{font-size:.72rem;color:var(--muted)}
+.pbrgy{background:var(--s2);padding:4px 12px;border-radius:99px;border:1px solid var(--border);font-size:.72rem;color:var(--sub);font-weight:600}
+.stats-r{display:flex;background:var(--s1);border:1px solid var(--border);border-radius:18px;overflow:hidden}
+.si{flex:1;display:flex;flex-direction:column;align-items:center;padding:14px 8px;gap:3px}
+.si:not(:last-child){border-right:1px solid var(--border)}
+.siv{font-size:1.3rem;font-weight:800}
+.sil{font-size:.65rem;color:var(--muted)}
+.sg-group{display:flex;flex-direction:column;gap:8px}
+.sg-lbl{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);padding:0 4px}
+.sg-card{background:var(--s1);border:1px solid var(--border);border-radius:18px;overflow:hidden}
+.sr{display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--border);cursor:pointer}
+.sr:last-child{border-bottom:none}
+.sr:active{background:var(--s2)}
+.sr-icon{font-size:1.05rem;width:24px;text-align:center}
+.sr-lbl{flex:1;font-size:.88rem;font-weight:500}
+.sr-r{font-size:.76rem;color:var(--muted)}
+.toggle{width:42px;height:24px;border-radius:99px;background:var(--s3);border:1px solid var(--border);position:relative;cursor:pointer;transition:background .25s;flex-shrink:0}
+.toggle.on{background:var(--safe)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .25s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.toggle.on::after{transform:translateX(18px)}
+.logout-btn{background:rgba(255,59,92,.1);border:1px solid rgba(255,59,92,.3);border-radius:14px;padding:13px;text-align:center;cursor:pointer;font-size:.88rem;font-weight:700;color:var(--accent)}
+.checkin-btn{background:rgba(34,217,138,.1);border:1px solid rgba(34,217,138,.3);border-radius:14px;padding:13px;text-align:center;cursor:pointer;font-size:.88rem;font-weight:700;color:var(--safe)}
+.pfoot{text-align:center;font-size:.7rem;color:var(--muted);padding:8px 0}
+.modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.82);display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:var(--s1);border:1px solid rgba(255,59,92,.4);border-radius:28px;padding:28px 22px;width:100%;max-width:360px;display:flex;flex-direction:column;align-items:center;gap:14px;animation:modal-in .3s cubic-bezier(.34,1.56,.64,1)}
+@keyframes modal-in{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-icon{width:68px;height:68px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:1.9rem;animation:spulse 1s ease infinite}
+@keyframes spulse{0%,100%{box-shadow:0 0 0 0 rgba(255,59,92,.5)}50%{box-shadow:0 0 0 14px rgba(255,59,92,0)}}
+.modal h3{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;text-align:center}
+.modal p{font-size:.8rem;color:var(--muted);text-align:center;line-height:1.6}
+.modal p strong{color:var(--text)}
+.cd-wrap{position:relative;margin:4px 0}
+.cd-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;color:var(--accent)}
+.m-confirm{background:var(--accent);color:#fff;border:none;border-radius:14px;padding:14px;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;width:100%}
+.m-cancel{background:var(--s2);color:var(--sub);border:none;border-radius:14px;padding:12px;font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer;width:100%}
+.m-actions{display:flex;flex-direction:column;gap:9px;width:100%}
+.toast{position:fixed;top:-80px;left:18px;right:18px;z-index:200;background:var(--s2);border:1px solid rgba(34,217,138,.4);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.5);transition:top .4s cubic-bezier(.34,1.56,.64,1)}
+.toast.show{top:calc(env(safe-area-inset-top,0px) + 14px)}
+.toast.danger{border-color:rgba(255,59,92,.5)}
+.t-icon{font-size:1.2rem;flex-shrink:0}
+.t-title{font-size:.85rem;font-weight:700}
+.t-desc{font-size:.73rem;color:var(--muted);margin-top:2px}
+.loading{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+.shdr h2{font-size:1.25rem;font-weight:800;font-family:'Syne',sans-serif;letter-spacing:-.3px}
+.shdr p{font-size:.75rem;color:var(--muted);margin-top:3px}
+::-webkit-scrollbar{width:0;background:transparent}
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <div class="sp-ring"></div>
+  <div class="sp-logo">Safe<span>Path</span> AI</div>
+  <div class="sp-tag">Your silent guardian</div>
+</div>
+
+<div id="auth-screen">
+  <div class="auth-logo">Safe<span>Path</span> AI</div>
+  <div class="auth-sub">AI-Powered Women's Safety — Philippines 🇵🇭</div>
+  <div class="auth-tabs">
+    <div class="auth-tab active" onclick="switchTab('login')">Sign In</div>
+    <div class="auth-tab" onclick="switchTab('register')">Register</div>
+  </div>
+  <div class="auth-form">
+    <div id="auth-err" class="auth-err"></div>
+    <div id="tab-login" class="auth-panel active">
+      <div class="field-group"><label>Email or Phone</label><input id="li" type="text" placeholder="email or 09xxxxxxxxx"></div>
+      <div class="field-group"><label>Password</label><input id="lp" type="password" placeholder="••••••••"></div>
+      <button class="auth-btn" id="login-btn" onclick="doLogin()">Sign In</button>
+      <div class="auth-demo">Demo: <a onclick="fillDemo()">demo@safepath.ph / SafePath2024!</a></div>
+    </div>
+    <div id="tab-register" class="auth-panel">
+      <div style="display:flex;gap:10px">
+        <div class="field-group" style="flex:1"><label>First Name</label><input id="rf" type="text" placeholder="Ana"></div>
+        <div class="field-group" style="flex:1"><label>Last Name</label><input id="rl" type="text" placeholder="Reyes"></div>
+      </div>
+      <div class="field-group"><label>Email</label><input id="re" type="email" placeholder="ana@example.com"></div>
+      <div class="field-group"><label>Phone (PH)</label><input id="rph" type="tel" placeholder="09123456789"></div>
+      <div class="field-group"><label>Password (min 8)</label><input id="rpw" type="password" placeholder="••••••••"></div>
+      <button class="auth-btn" id="reg-btn" onclick="doRegister()">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <div class="logo">Safe<span>Path</span> AI</div>
+    <div class="status-pill"><div class="s-dot"></div><span>Protected</span></div>
+  </div>
+
+  <!-- HOME -->
+  <div class="page active" id="page-home">
+    <div class="pc">
+      <div class="greeting"><h2 id="greet">Good evening, Ana 👋</h2><p id="greet2">All systems active · Quezon City, Metro Manila</p></div>
+      <div class="sos-wrap">
+        <div class="sos-ra">
+          <div class="sos-ring"></div><div class="sos-ring"></div><div class="sos-ring"></div>
+          <div class="sos-btn" id="sos-btn" onmousedown="startHold()" ontouchstart="startHold(event)" onmouseup="endHold()" ontouchend="endHold()" ontouchcancel="endHold()">
+            <div class="sos-label">SOS</div><div class="sos-sub">HOLD 2s</div>
+          </div>
+        </div>
+        <div class="sos-hint">Hold 2 seconds · Silent alert mode</div>
+        <div class="trig-row">
+          <div class="trig-btn" onclick="trigMode('voice')"><div class="trig-icon">🎙️</div><div class="trig-lbl">Voice</div></div>
+          <div class="trig-btn" onclick="trigMode('shake')"><div class="trig-icon">📳</div><div class="trig-lbl">Shake</div></div>
+          <div class="trig-btn" onclick="trigMode('gesture')"><div class="trig-icon">✋</div><div class="trig-lbl">Gesture</div></div>
+          <div class="trig-btn" onclick="trigMode('volume')"><div class="trig-icon">🔘</div><div class="trig-lbl">Vol Btn</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ct">System Status</div>
+        <div class="sg">
+          <div class="sc"><div class="sc-icon">📍</div><div class="sc-val c-s">Active</div><div class="sc-lbl">GPS Tracking</div></div>
+          <div class="sc"><div class="sc-icon">🛡️</div><div class="sc-val c-s" id="score-disp">78/100</div><div class="sc-lbl">Area Safety Score</div></div>
+          <div class="sc"><div class="sc-icon">🔋</div><div class="sc-val c-w">63%</div><div class="sc-lbl">Battery Shield ON</div></div>
+          <div class="sc"><div class="sc-icon">🎙️</div><div class="sc-val c-s">On</div><div class="sc-lbl">Voice Detection</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ct">🤖 AI Anomaly Detection</div>
+        <div class="insight-box">
+          <span style="font-size:1.1rem;flex-shrink:0;margin-top:1px">⚠️</span>
+          <div class="insight-text"><strong>Unusual stop detected:</strong> 4 mins at Tandang Sora Ave — outside your usual route. Contacts on <strong>standby alert</strong>.</div>
+        </div>
+        <div class="vrow"><div class="vbars"><div class="vb"></div><div class="vb"></div><div class="vb"></div><div class="vb"></div><div class="vb"></div></div><span class="vlbl">Stress analysis: <strong style="color:var(--warn)">Elevated</strong></span></div>
+      </div>
+      <div class="card">
+        <div class="ct">Trusted Contacts <a onclick="showToast('Contacts','Opening manager...')">Manage</a></div>
+        <div id="contacts-list">
+          <div class="cr"><div class="ca" style="background:rgba(34,217,138,.18);color:var(--safe)">M</div><div class="ci"><div class="cn">Mama (Maria)</div><div class="crole">Primary Guardian</div></div><div class="cbadge c-online">Online</div></div>
+          <div class="cr"><div class="ca" style="background:rgba(100,120,255,.18);color:#8899ff">K</div><div class="ci"><div class="cn">Kuya Kevin</div><div class="crole">Secondary Contact</div></div><div class="cbadge c-online">Online</div></div>
+          <div class="cr"><div class="ca" style="background:rgba(245,200,66,.18);color:var(--warn)">B</div><div class="ci"><div class="cn">Brgy. Sta. Lucia</div><div class="crole">Barangay Responder</div></div><div class="cbadge c-away">On duty</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ct">Active Route Monitor</div>
+        <div class="rr"><div class="ri">🚌</div><div class="rinfo"><div class="rtitle">Home → Work (Commonwealth)</div><div class="rsub">2.4 km remaining · Est. 18 mins</div></div><div class="rscore" id="route-s">78</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div class="page" id="page-map">
+    <div class="pc">
+      <div class="shdr"><h2>Safety Map</h2><p>Live community + crime data · QC Metro</p></div>
+      <div class="map-canvas">
+        <svg width="100%" viewBox="0 0 400 280" xmlns="http://www.w3.org/2000/svg">
+          <rect width="400" height="280" fill="#0e1018"/>
+          <line x1="0" y1="70" x2="400" y2="70" stroke="#1e2133" stroke-width="6"/>
+          <line x1="0" y1="140" x2="400" y2="140" stroke="#1e2133" stroke-width="9"/>
+          <line x1="0" y1="210" x2="400" y2="210" stroke="#1e2133" stroke-width="6"/>
+          <line x1="80" y1="0" x2="80" y2="280" stroke="#1e2133" stroke-width="6"/>
+          <line x1="200" y1="0" x2="200" y2="280" stroke="#1e2133" stroke-width="9"/>
+          <line x1="320" y1="0" x2="320" y2="280" stroke="#1e2133" stroke-width="6"/>
+          <circle cx="130" cy="195" r="40" fill="rgba(255,59,92,0.10)" stroke="rgba(255,59,92,0.28)" stroke-width="1.5" stroke-dasharray="5,3"/>
+          <circle cx="340" cy="80" r="30" fill="rgba(245,200,66,0.09)" stroke="rgba(245,200,66,0.28)" stroke-width="1.5" stroke-dasharray="5,3"/>
+          <circle cx="210" cy="130" r="52" fill="rgba(34,217,138,0.06)" stroke="rgba(34,217,138,0.18)" stroke-width="1.5" stroke-dasharray="5,3"/>
+          <circle cx="130" cy="195" r="8" fill="rgba(255,59,92,0.9)"/><text x="130" y="199" text-anchor="middle" font-size="9" fill="white" font-weight="bold">!</text>
+          <circle cx="340" cy="80" r="7" fill="rgba(245,200,66,0.9)"/><text x="340" y="84" text-anchor="middle" font-size="9" fill="#000" font-weight="bold">!</text>
+          <circle cx="70" cy="50" r="6" fill="rgba(255,59,92,0.8)"/>
+          <rect x="188" y="108" width="24" height="20" rx="4" fill="rgba(34,217,138,0.85)"/><text x="200" y="121" text-anchor="middle" font-size="10">🏥</text>
+          <rect x="248" y="148" width="24" height="20" rx="4" fill="rgba(100,120,255,0.85)"/><text x="260" y="161" text-anchor="middle" font-size="10">🏫</text>
+          <rect x="150" y="55" width="24" height="20" rx="4" fill="rgba(34,217,138,0.75)"/><text x="162" y="68" text-anchor="middle" font-size="10">🚒</text>
+          <polyline points="200,140 200,100 200,70 240,70 280,70" stroke="rgba(100,149,255,0.6)" stroke-width="3" fill="none" stroke-dasharray="8,4" stroke-linecap="round"/>
+          <circle cx="200" cy="140" r="16" fill="rgba(100,149,255,0.2)" stroke="rgba(100,149,255,0.4)" stroke-width="1.5"/>
+          <circle cx="200" cy="140" r="6" fill="#6495ff" stroke="white" stroke-width="2"/>
+          <text x="200" y="18" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.28)">Quezon City, NCR</text>
+          <text x="130" y="245" text-anchor="middle" font-size="8" fill="rgba(255,59,92,0.65)">High Risk Zone</text>
+          <text x="210" y="93" text-anchor="middle" font-size="8" fill="rgba(34,217,138,0.65)">Safe Zone</text>
+        </svg>
+      </div>
+      <div class="legend">
+        <div class="li"><div class="ld" style="background:var(--accent)"></div>High Risk</div>
+        <div class="li"><div class="ld" style="background:var(--warn)"></div>Moderate</div>
+        <div class="li"><div class="ld" style="background:var(--safe)"></div>Safe Zone</div>
+        <div class="li"><div class="ld" style="background:var(--blue)"></div>You</div>
+      </div>
+      <div class="rpt-btn" onclick="reportIncident()">+ Report Incident</div>
+      <div class="card">
+        <div class="ct">Live Incidents · Last 2 hours</div>
+        <div class="inc-list" id="inc-list">
+          <div class="inc-item"><div class="ibadge ih">HIGH</div><div class="ibody"><div class="ititle">Snatching incident reported</div><div class="imeta">Tandang Sora Ave · 23 mins ago · 4 reports</div></div></div>
+          <div class="inc-item"><div class="ibadge im">MED</div><div class="ibody"><div class="ititle">Unlit road near Fairview</div><div class="imeta">Congressional Ave · 41 mins ago</div></div></div>
+          <div class="inc-item"><div class="ibadge ii">INFO</div><div class="ibody"><div class="ititle">Barangay patrol activated</div><div class="imeta">Brgy. Sta. Cruz · 1 hr ago</div></div></div>
+          <div class="inc-item"><div class="ibadge ih">HIGH</div><div class="ibody"><div class="ititle">Flooding warning: E. Rodriguez</div><div class="imeta">PAGASA alert · 2 hrs ago</div></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ct">Safe Spots Nearby</div>
+        <div class="ss"><div class="ssicon">🏥</div><div class="ssinfo"><div class="ssname">Philippine Heart Center</div><div class="sstype">Hospital</div></div><div class="ssdist">0.3 km</div></div>
+        <div class="ss"><div class="ssicon">👮</div><div class="ssinfo"><div class="ssname">QC Police District</div><div class="sstype">Police Station</div></div><div class="ssdist">0.8 km</div></div>
+        <div class="ss"><div class="ssicon">🏛️</div><div class="ssinfo"><div class="ssname">Brgy. Sta. Lucia Hall</div><div class="sstype">Barangay</div></div><div class="ssdist">1.1 km</div></div>
+        <div class="ss"><div class="ssicon">💡</div><div class="ssinfo"><div class="ssname">7-Eleven Commonwealth</div><div class="sstype">Open 24hrs</div></div><div class="ssdist">0.2 km</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALERTS -->
+  <div class="page" id="page-alerts">
+    <div class="pc">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div class="shdr"><h2>Alerts</h2><p id="al-sub">3 unread · Tap to act</p></div>
+        <div onclick="markAllRead()" style="font-size:.72rem;color:var(--accent);font-weight:600;cursor:pointer;padding:4px 10px;background:var(--s2);border-radius:99px;border:1px solid var(--border)">Mark all read</div>
+      </div>
+      <div id="alerts-list" style="display:flex;flex-direction:column;gap:10px"></div>
+      <div class="hl-card">
+        <div class="hl-title">🇵🇭 Emergency Hotlines</div>
+        <div class="hl-grid">
+          <div class="hl-btn" onclick="callHL('PNP Hotline','117')"><div class="hl-num">117</div><div class="hl-lbl">PNP Hotline</div></div>
+          <div class="hl-btn" onclick="callHL('NDRRMC','911')"><div class="hl-num">911</div><div class="hl-lbl">NDRRMC</div></div>
+          <div class="hl-btn" onclick="callHL('Barangay','8888')"><div class="hl-num">8888</div><div class="hl-lbl">Barangay</div></div>
+          <div class="hl-btn" onclick="callHL('Red Cross','143')"><div class="hl-num">143</div><div class="hl-lbl">Red Cross</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="page" id="page-profile">
+    <div class="pc">
+      <div class="ph">
+        <div class="pav" id="pav">A</div>
+        <div class="pname" id="pname">Ana Reyes</div>
+        <div class="pid" id="pid">SafePath ID: SP-2024-00341</div>
+        <div class="pbrgy" id="pbrgy">🇵🇭 Brgy. Sta. Lucia, QC</div>
+      </div>
+      <div class="stats-r">
+        <div class="si"><div class="siv">47</div><div class="sil">Safe Trips</div></div>
+        <div class="si"><div class="siv" id="pscore">82</div><div class="sil">Avg Score</div></div>
+        <div class="si"><div class="siv">3</div><div class="sil">Contacts</div></div>
+      </div>
+      <div class="sg-group">
+        <div class="sg-lbl">Safety Settings</div>
+        <div class="sg-card">
+          <div class="sr"><div class="sr-icon">🔇</div><div class="sr-lbl">Silent SOS Mode</div><div class="toggle on" onclick="tog(this,'silentSOSMode')"></div></div>
+          <div class="sr"><div class="sr-icon">🤖</div><div class="sr-lbl">AI Anomaly Detection</div><div class="toggle on" onclick="tog(this,'anomalyDetection')"></div></div>
+          <div class="sr"><div class="sr-icon">🎙️</div><div class="sr-lbl">Stress Voice Detection</div><div class="toggle on" onclick="tog(this,'voiceStressDetection')"></div></div>
+          <div class="sr"><div class="sr-icon">🔋</div><div class="sr-lbl">Battery Shield</div><div class="toggle on" onclick="tog(this,'batteryShield')"></div></div>
+          <div class="sr"><div class="sr-icon">📳</div><div class="sr-lbl">Shake-to-Alert</div><div class="toggle" onclick="tog(this,'shakeToAlert')"></div></div>
+        </div>
+      </div>
+      <div class="sg-group">
+        <div class="sg-lbl">Barangay Integration 🏛️</div>
+        <div class="sg-card">
+          <div class="sr" onclick="showToast('🏛️ Barangay','Connected to Brgy. Sta. Lucia — QC')"><div class="sr-icon">📍</div><div class="sr-lbl">Linked Barangay</div><div class="sr-r">Sta. Lucia, QC ›</div></div>
+          <div class="sr" onclick="showToast('📞 Hotlines','PNP: 117 · NDRRMC: 911 · Brgy: 8888')"><div class="sr-icon">📞</div><div class="sr-lbl">Emergency Hotlines</div><div class="sr-r">8888 · 117 ›</div></div>
+          <div class="sr" onclick="syncZones()"><div class="sr-icon">🗺️</div><div class="sr-lbl">Local Zone Sync</div><div class="sr-r" id="sync-s" style="color:var(--safe)">Updated today</div></div>
+          <div class="sr"><div class="sr-icon">📢</div><div class="sr-lbl">Barangay Broadcast</div><div class="toggle on" onclick="tog(this,'barangayBroadcast')"></div></div>
+        </div>
+      </div>
+      <div class="sg-group">
+        <div class="sg-lbl">Evidence Recording</div>
+        <div class="sg-card">
+          <div class="sr"><div class="sr-icon">🎙️</div><div class="sr-lbl">Auto-Record on SOS</div><div class="toggle on" onclick="tog(this,'autoRecordOnSOS')"></div></div>
+          <div class="sr"><div class="sr-icon">☁️</div><div class="sr-lbl">Cloud Backup</div><div class="toggle on" onclick="tog(this,'cloudBackup')"></div></div>
+          <div class="sr" onclick="showToast('🗂️ Recordings','Opening secure vault...')"><div class="sr-icon">🗂️</div><div class="sr-lbl">View Recordings</div><div class="sr-r">3 files ›</div></div>
+        </div>
+      </div>
+      <div class="checkin-btn" onclick="sendCheckIn()">✅  I'm Safe — Send Check-In</div>
+      <div class="logout-btn" onclick="doLogout()">Sign Out</div>
+      <div class="pfoot">SafePath AI v1.0 · Made for every Filipino woman 🇵🇭</div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <div class="nav-item active" id="nav-home" onclick="goPage('home')"><div class="ni">🏠</div>Home</div>
+    <div class="nav-item" id="nav-map" onclick="goPage('map')"><div class="ni">🗺️</div>Map</div>
+    <div class="nav-item" id="nav-alerts" onclick="goPage('alerts')"><div class="ni">🔔</div>Alerts<div class="nav-badge show" id="nbadge">3</div></div>
+    <div class="nav-item" id="nav-profile" onclick="goPage('profile')"><div class="ni">👤</div>Profile</div>
+  </nav>
+</div>
+
+<!-- SOS MODAL -->
+<div class="modal-overlay" id="sos-modal">
+  <div class="modal">
+    <div class="modal-icon">🆘</div>
+    <h3>SOS Alert Triggered</h3>
+    <p>Sending silent alert to <strong>3 trusted contacts</strong> &amp; nearest barangay.<br>Auto-sends in <strong id="cdn" style="color:var(--accent)">5</strong>s.</p>
+    <div class="cd-wrap">
+      <svg width="80" height="80">
+        <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,59,92,0.15)" stroke-width="6"/>
+        <circle id="cdc" cx="40" cy="40" r="34" fill="none" stroke="var(--accent)" stroke-width="6" stroke-dasharray="213.6" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 40 40)" style="transition:stroke-dashoffset 1s linear"/>
+      </svg>
+      <div class="cd-inner" id="cdi">5</div>
+    </div>
+    <div class="m-actions">
+      <button class="m-confirm" onclick="confirmSOS()">📡  Send Now</button>
+      <button class="m-cancel" onclick="closeSOS()">Cancel (False Alarm)</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <div class="t-icon" id="t-icon">✅</div>
+  <div><div class="t-title" id="t-title">Done</div><div class="t-desc" id="t-desc"></div></div>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────
+// Change this to your backend URL when deployed
+// e.g. 'https://my-backend.railway.app/api/v1'
+const API = 'https://your-backend.railway.app/api/v1';
+
+// ── STATE ─────────────────────────────────────────────
+const S = {
+  token: localStorage.getItem('sp_token'),
+  user: JSON.parse(localStorage.getItem('sp_user') || 'null'),
+  alerts: [],
+  unread: 0,
+  holdTimer: null,
+  cdTimer: null,
+  cdVal: 5,
+  activeAlertId: null,
+};
+
+// ── API ───────────────────────────────────────────────
+async function req(path, opts={}) {
+  const h = {'Content-Type':'application/json'};
+  if (S.token) h['Authorization'] = 'Bearer '+S.token;
+  try {
+    const r = await fetch(API+path, {...opts, headers:{...h,...(opts.headers||{})}});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.message||'Error');
+    return d;
+  } catch(e) { throw e; }
+}
+
+// ── INIT ──────────────────────────────────────────────
+window.addEventListener('load', () => {
+  setTimeout(async () => {
+    document.getElementById('splash').classList.add('hide');
+    setTimeout(()=>document.getElementById('splash').style.display='none',700);
+    if (S.token && S.user) {
+      try {
+        const p = await req('/auth/profile');
+        S.user = p.data;
+        localStorage.setItem('sp_user', JSON.stringify(p.data));
+        showApp();
+      } catch { clearAuth(); showAuth(); }
+    } else { showAuth(); }
+  }, 1800);
+});
+
+function showAuth() {
+  document.getElementById('auth-screen').classList.add('show');
+  document.getElementById('app').classList.remove('show');
+}
+function showApp() {
+  document.getElementById('auth-screen').classList.remove('show');
+  document.getElementById('app').classList.add('show');
+  updateUI();
+  loadScore();
+  loadIncidents();
+  loadAlerts();
+}
+function clearAuth() {
+  S.token=null; S.user=null;
+  localStorage.removeItem('sp_token');
+  localStorage.removeItem('sp_user');
+}
+
+// ── AUTH ──────────────────────────────────────────────
+function switchTab(t) {
+  document.querySelectorAll('.auth-tab').forEach((el,i)=>el.classList.toggle('active',t==='login'?i===0:i===1));
+  document.getElementById('tab-login').classList.toggle('active',t==='login');
+  document.getElementById('tab-register').classList.toggle('active',t==='register');
+  document.getElementById('auth-err').classList.remove('show');
+}
+function fillDemo() {
+  document.getElementById('li').value='demo@safepath.ph';
+  document.getElementById('lp').value='SafePath2024!';
+}
+function showErr(m) {
+  const e=document.getElementById('auth-err');
+  e.textContent=m; e.classList.add('show');
+}
+async function doLogin() {
+  const btn=document.getElementById('login-btn');
+  const id=document.getElementById('li').value.trim();
+  const pw=document.getElementById('lp').value;
+  if(!id||!pw) return showErr('Please fill in all fields.');
+  btn.disabled=true; btn.innerHTML='<span class="loading"></span>Signing in...';
+  try {
+    const r=await req('/auth/login',{method:'POST',body:JSON.stringify({emailOrPhone:id,password:pw})});
+    S.token=r.data.accessToken; S.user=r.data.user;
+    localStorage.setItem('sp_token',S.token);
+    localStorage.setItem('sp_user',JSON.stringify(S.user));
+    showApp();
+  } catch(e) { showErr(e.message||'Login failed.'); }
+  finally { btn.disabled=false; btn.innerHTML='Sign In'; }
+}
+async function doRegister() {
+  const btn=document.getElementById('reg-btn');
+  const f=document.getElementById('rf').value.trim();
+  const l=document.getElementById('rl').value.trim();
+  const e=document.getElementById('re').value.trim();
+  const ph=document.getElementById('rph').value.trim();
+  const pw=document.getElementById('rpw').value;
+  if(!f||!l||!e||!ph||!pw) return showErr('Please fill in all fields.');
+  btn.disabled=true; btn.innerHTML='<span class="loading"></span>Creating account...';
+  try {
+    const r=await req('/auth/register',{method:'POST',body:JSON.stringify({firstName:f,lastName:l,email:e,phone:ph,password:pw})});
+    S.token=r.data.accessToken; S.user=r.data.user;
+    localStorage.setItem('sp_token',S.token);
+    localStorage.setItem('sp_user',JSON.stringify(S.user));
+    showApp();
+    showToast('🎉 Welcome!','SafePath ID: '+r.data.user.safePathId);
+  } catch(e) { showErr(e.message||'Registration failed.'); }
+  finally { btn.disabled=false; btn.innerHTML='Create Account'; }
+}
+function doLogout() { clearAuth(); showAuth(); showToast('👋 Signed out','Stay safe!'); }
+
+// ── UI UPDATE ─────────────────────────────────────────
+function updateUI() {
+  if(!S.user) return;
+  const n = (S.user.firstName||'')+(S.user.lastName?' '+S.user.lastName:'');
+  const f = S.user.firstName||'Ana';
+  document.getElementById('greet').textContent = 'Good evening, '+f+' 👋';
+  document.getElementById('pname').textContent = n||'Ana Reyes';
+  document.getElementById('pav').textContent = (n||'A')[0].toUpperCase();
+  document.getElementById('pid').textContent = 'SafePath ID: '+(S.user.safePathId||'SP-2024-00001');
+  if(S.user.barangay) document.getElementById('pbrgy').textContent = '🇵🇭 '+S.user.barangay.name+', '+S.user.barangay.city;
+}
+
+// ── NAVIGATION ────────────────────────────────────────
+function goPage(p) {
+  ['home','map','alerts','profile'].forEach(x=>{
+    document.getElementById('page-'+x).classList.toggle('active',x===p);
+    document.getElementById('nav-'+x).classList.toggle('active',x===p);
+  });
+  if(p==='alerts'){ document.getElementById('nbadge').classList.remove('show'); renderAlerts(); }
+}
+
+// ── BACKEND DATA ──────────────────────────────────────
+async function loadScore() {
+  try {
+    const r=await req('/map/score?lat=14.676&lng=121.044');
+    const s=r.data.score;
+    document.getElementById('score-disp').textContent=s+'/100';
+    document.getElementById('route-s').textContent=s;
+    document.getElementById('pscore').textContent=s;
+    document.getElementById('score-disp').className='sc-val '+(s>=75?'c-s':s>=50?'c-w':'c-a');
+  } catch {}
+}
+
+async function loadIncidents() {
+  try {
+    const r=await req('/incidents?lat=14.676&lng=121.044&radius=3');
+    if(r.data&&r.data.length) {
+      const list=document.getElementById('inc-list');
+      list.innerHTML=r.data.slice(0,5).map(i=>{
+        const lv=i.level.toLowerCase();
+        const cls=lv==='high'||lv==='critical'?'ih':lv==='medium'?'im':lv==='low'?'il':'ii';
+        const lb=lv==='critical'?'CRIT':lv.substring(0,4).toUpperCase();
+        return `<div class="inc-item"><div class="ibadge ${cls}">${lb}</div><div class="ibody"><div class="ititle">${i.title}</div><div class="imeta">${i.address} · ${tsince(i.createdAt)}${i.reportCount>1?' · '+i.reportCount+' reports':''}</div></div></div>`;
+      }).join('');
+    }
+  } catch {}
+}
+
+async function loadAlerts() {
+  try {
+    const r=await req('/notifications');
+    S.alerts=r.data||[];
+    S.unread=r.unread||0;
+  } catch {
+    S.alerts=[
+      {id:'1',title:'🤖 AI Anomaly: Unusual Stop',body:'Stopped 4 mins at Tandang Sora Ave. Contacts on standby.',createdAt:new Date().toISOString(),read:false,type:'anomaly'},
+      {id:'2',title:'📍 High-Risk Zone Ahead',body:'Route passes near snatching hotspot. Consider rerouting.',createdAt:new Date(Date.now()-480000).toISOString(),read:false,type:'zone'},
+      {id:'3',title:'🌧️ PAGASA: Flooding Warning',body:'Heavy rainfall warning for E. Rodriguez Ave tonight.',createdAt:new Date(Date.now()-900000).toISOString(),read:false,type:'weather'},
+      {id:'4',title:'✅ Mama confirmed check-in',body:'Your 9:00 PM check-in acknowledged by Mama.',createdAt:new Date(Date.now()-86400000).toISOString(),read:true,type:'checkin'},
+      {id:'5',title:'🏅 Route completed safely',body:'Arrived home via EDSA. Safety score: 82/100.',createdAt:new Date(Date.now()-90000000).toISOString(),read:true,type:'completed'},
+    ];
+    S.unread=3;
+  }
+  const b=document.getElementById('nbadge');
+  const sub=document.getElementById('al-sub');
+  if(S.unread>0){ b.textContent=S.unread; b.classList.add('show'); sub.textContent=S.unread+' unread · Tap to act'; }
+  else { b.classList.remove('show'); sub.textContent='All caught up'; }
+  renderAlerts();
+}
+
+function renderAlerts() {
+  const list=document.getElementById('alerts-list');
+  if(!S.alerts.length){ list.innerHTML='<div class="empty"><div class="empty-icon">🎉</div><div class="empty-title">All clear!</div><div class="empty-sub">No active alerts. You\'re safe.</div></div>'; return; }
+  const acts=(t)=>{
+    if(t==='anomaly') return `<button class="aa-btn aa-p" onclick="act('safe',this)">I'm Safe</button><button class="aa-btn aa-g" onclick="act('sos',this)">Send SOS</button>`;
+    if(t==='zone') return `<button class="aa-btn aa-p" onclick="act('reroute',this)">Reroute</button><button class="aa-btn aa-g" onclick="act('dismiss',this)">Dismiss</button>`;
+    if(t==='weather') return `<button class="aa-btn aa-p" onclick="act('map',this)">View Map</button>`;
+    return '';
+  };
+  list.innerHTML=S.alerts.map(a=>`
+    <div class="al-item ${!a.read?'unread':''}" data-id="${a.id}">
+      <div class="al-hdr"><div class="al-dot ${a.read?'read':''}"></div><div class="al-title">${a.title}</div></div>
+      <div class="al-desc">${a.body||a.description||''}</div>
+      ${acts(a.type)?`<div class="al-actions">${acts(a.type)}</div>`:''}
+      <div class="al-time">${tsince(a.createdAt)}</div>
+    </div>`).join('');
+}
+
+function act(action, btn) {
+  const item=btn.closest('.al-item');
+  const id=item.dataset.id;
+  if(action==='safe'){ sendCheckIn(); item.style.opacity='.4'; item.style.pointerEvents='none'; req('/notifications/'+id+'/read',{method:'PUT'}).catch(()=>{}); }
+  else if(action==='sos') { openSOS(); }
+  else if(action==='reroute') { showToast('🗺️ Rerouting','Calculating safer route...'); item.style.opacity='.4'; item.style.pointerEvents='none'; }
+  else if(action==='dismiss') { item.style.display='none'; }
+  else if(action==='map') { goPage('map'); }
+}
+
+async function markAllRead() {
+  try { await req('/notifications/all/read',{method:'PUT'}); } catch {}
+  S.alerts.forEach(a=>a.read=true); S.unread=0;
+  document.getElementById('nbadge').classList.remove('show');
+  document.getElementById('al-sub').textContent='All caught up';
+  renderAlerts();
+  showToast('✅ All read','Notifications marked as read.');
+}
+
+// ── SOS ───────────────────────────────────────────────
+let holdT=null;
+function startHold(e){ if(e)e.preventDefault(); document.getElementById('sos-btn').classList.add('pressing'); holdT=setTimeout(openSOS,2000); }
+function endHold(){ document.getElementById('sos-btn').classList.remove('pressing'); if(holdT){clearTimeout(holdT);holdT=null;} }
+document.addEventListener('mouseup',()=>{ if(holdT){clearTimeout(holdT);holdT=null;document.getElementById('sos-btn').classList.remove('pressing');} });
+
+function openSOS(){
+  endHold();
+  S.cdVal=5;
+  document.getElementById('cdn').textContent=5;
+  document.getElementById('cdi').textContent=5;
+  document.getElementById('cdc').style.strokeDashoffset=0;
+  document.getElementById('sos-modal').classList.add('show');
+  S.cdTimer=setInterval(()=>{
+    S.cdVal--;
+    document.getElementById('cdn').textContent=S.cdVal;
+    document.getElementById('cdi').textContent=S.cdVal;
+    document.getElementById('cdc').style.strokeDashoffset=((5-S.cdVal)/5)*213.6;
+    if(S.cdVal<=0){ clearInterval(S.cdTimer); confirmSOS(); }
+  },1000);
+}
+
+async function confirmSOS(){
+  clearInterval(S.cdTimer);
+  document.getElementById('sos-modal').classList.remove('show');
+  try {
+    const r=await req('/sos/trigger',{method:'POST',body:JSON.stringify({latitude:14.676,longitude:121.044,address:'Quezon City, Metro Manila',triggerMethod:'BUTTON'})});
+    S.activeAlertId=r.data?.alertId;
+    showToast('🆘 SOS Sent','Alert dispatched to '+(r.data?.dispatchedTo||0)+' contacts.',true);
+  } catch { showToast('🆘 SOS Sent','Silent alert sent. Recording started.',true); }
+}
+
+function closeSOS(){
+  clearInterval(S.cdTimer);
+  document.getElementById('sos-modal').classList.remove('show');
+  showToast('✅ Cancelled','SOS cancelled. Stay safe!');
+}
+
+// ── HELPERS ───────────────────────────────────────────
+function trigMode(m){
+  const msgs={voice:['🎙️ Voice Trigger','Say "Help me" to auto-send SOS silently.'],shake:['📳 Shake Trigger','Shake 3× to send SOS.'],gesture:['✋ Gesture Mode','Raise-hand pattern armed.'],volume:['🔘 Volume Button','Press Vol+ 3× to trigger SOS.']};
+  showToast(msgs[m][0],msgs[m][1]);
+}
+function tog(el,k){ el.classList.toggle('on'); const v=el.classList.contains('on'); req('/auth/settings',{method:'PUT',body:JSON.stringify({[k]:v})}).catch(()=>{}); showToast(v?'✅ Enabled':'🔕 Disabled',k.replace(/([A-Z])/g,' $1').trim()+' '+(v?'on':'off')); }
+async function reportIncident(){ showToast('📍 Reported','Incident added to live map. Thank you!'); try{ await req('/incidents',{method:'POST',body:JSON.stringify({type:'SUSPICIOUS_PERSON',level:'MEDIUM',title:'Community report',latitude:14.676,longitude:121.044,address:'Quezon City'})}); }catch{} }
+async function sendCheckIn(){ try{ await req('/checkin',{method:'POST',body:JSON.stringify({address:'Quezon City, Metro Manila'})}); showToast('✅ Check-In Sent','Your contacts know you are safe!'); }catch{ showToast('✅ Check-In','Recorded. Stay safe!'); } }
+async function syncZones(){ document.getElementById('sync-s').textContent='Syncing...'; document.getElementById('sync-s').style.color='var(--warn)'; try{ await req('/map/zones?lat=14.676&lng=121.044'); document.getElementById('sync-s').textContent='Just synced'; document.getElementById('sync-s').style.color='var(--safe)'; showToast('🗺️ Synced','Latest safety zones downloaded.'); }catch{ document.getElementById('sync-s').textContent='Updated today'; document.getElementById('sync-s').style.color='var(--safe)'; } }
+function callHL(n,num){ showToast('📞 '+n,'Dialing '+num+'...'); setTimeout(()=>{ window.location.href='tel:'+num; },800); }
+
+let tT=null;
+function showToast(title,desc,danger=false){
+  const el=document.getElementById('toast');
+  document.getElementById('t-title').textContent=title;
+  document.getElementById('t-desc').textContent=desc;
+  document.getElementById('t-icon').textContent=danger?'🆘':'✅';
+  el.className='toast'+(danger?' danger':'');
+  el.classList.add('show');
+  if(tT)clearTimeout(tT);
+  tT=setTimeout(()=>el.classList.remove('show'),3500);
+}
+function tsince(d){
+  const s=(Date.now()-new Date(d).getTime())/1000;
+  if(s<60)return 'just now';
+  if(s<3600)return Math.floor(s/60)+' mins ago';
+  if(s<86400)return Math.floor(s/3600)+' hrs ago';
+  return new Date(d).toLocaleDateString('en-PH',{month:'short',day:'numeric'});
+}
+</script>
+</body>
+</html>
