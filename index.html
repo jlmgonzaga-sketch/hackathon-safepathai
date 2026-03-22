@@ -237,7 +237,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
       <div class="field-group"><label>Email or Phone</label><input id="li" type="text" placeholder="email or 09xxxxxxxxx"></div>
       <div class="field-group"><label>Password</label><input id="lp" type="password" placeholder="••••••••"></div>
       <button class="auth-btn" id="login-btn" onclick="doLogin()">Sign In</button>
-      <div class="auth-demo">Demo: <a onclick="fillDemo()">demo@safepath.ph / SafePath2024!</a></div>
+      <div class="auth-demo">Demo: <a onclick="fillDemo()"><span class="__cf_email__" data-cfemail="1c787971735c6f7d7a796c7d6874326c74">[email&#160;protected]</span> / SafePath2024!</a></div>
     </div>
     <div id="tab-register" class="auth-panel">
       <div style="display:flex;gap:10px">
@@ -466,11 +466,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   <div><div class="t-title" id="t-title">Done</div><div class="t-desc" id="t-desc"></div></div>
 </div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ── CONFIG ────────────────────────────────────────────
 // Change this to your backend URL when deployed
 // e.g. 'https://my-backend.railway.app/api/v1'
-const API = 'https://your-backend.railway.app/api/v1';
+const API = 'http://localhost:3000/api/v1';
 
 // ── STATE ─────────────────────────────────────────────
 const S = {
@@ -502,12 +502,13 @@ window.addEventListener('load', () => {
     document.getElementById('splash').classList.add('hide');
     setTimeout(()=>document.getElementById('splash').style.display='none',700);
     if (S.token && S.user) {
+      if (S.token === 'demo-token') { showApp(); return; }
       try {
         const p = await req('/auth/profile');
         S.user = p.data;
         localStorage.setItem('sp_user', JSON.stringify(p.data));
         showApp();
-      } catch { clearAuth(); showAuth(); }
+      } catch { showApp(); }
     } else { showAuth(); }
   }, 1800);
 });
@@ -551,13 +552,34 @@ async function doLogin() {
   const pw=document.getElementById('lp').value;
   if(!id||!pw) return showErr('Please fill in all fields.');
   btn.disabled=true; btn.innerHTML='<span class="loading"></span>Signing in...';
+
+  // Demo mode: works without backend
+  const demoEmails=['demo@safepath.ph','demo'];
+  const demoPws=['SafePath2024!','demo'];
+  if(demoEmails.includes(id.toLowerCase()) && demoPws.includes(pw)) {
+    S.token='demo-token';
+    S.user={firstName:'Ana',lastName:'Reyes',safePathId:'SP-2024-00341',barangay:{name:'Sta. Lucia',city:'Quezon City'}};
+    localStorage.setItem('sp_token',S.token);
+    localStorage.setItem('sp_user',JSON.stringify(S.user));
+    btn.disabled=false; btn.innerHTML='Sign In';
+    showApp();
+    return;
+  }
+
   try {
     const r=await req('/auth/login',{method:'POST',body:JSON.stringify({emailOrPhone:id,password:pw})});
     S.token=r.data.accessToken; S.user=r.data.user;
     localStorage.setItem('sp_token',S.token);
     localStorage.setItem('sp_user',JSON.stringify(S.user));
     showApp();
-  } catch(e) { showErr(e.message||'Login failed.'); }
+  } catch(e) {
+    // If backend unreachable, still allow demo login
+    if(e.message && e.message.includes('fetch')) {
+      showErr('Backend offline. Use demo@safepath.ph / SafePath2024! to continue.');
+    } else {
+      showErr(e.message||'Login failed.');
+    }
+  }
   finally { btn.disabled=false; btn.innerHTML='Sign In'; }
 }
 async function doRegister() {
